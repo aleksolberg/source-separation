@@ -7,3 +7,5 @@
 /lib
 /share
 *.wav
+*.json
+pyvenv.cfg

@@ -1,7 +1,7 @@
 import nussl
 from nussl.datasets import transforms as nussl_tfm
 import torch
-from models import MaskInference, UNet
+from models import UNet, MelUNet
 import os
 import json
 import glob
@@ -12,15 +12,15 @@ import utils
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 stft_params = nussl.STFTParams(window_length=512, hop_length=128, window_type='sqrt_hann')
 
-model_path = 'source-separation/models/UNet/03/'
-model = UNet.build(257, 432, 1, 1)
+model_path = 'source-separation/models/MelUNet/01/'
+#model = UNet.build(257, 432, 1, 1)
 
 separator = nussl.separation.deep.DeepMaskEstimation(
     nussl.AudioSignal(sample_rate=11025), model_path=model_path + 'checkpoints/best.model.pth',
     device=DEVICE
 )
 
-print(separator.metadata)
+print(separator.config)
 
 seperated_instruments = ['ins3']
 other_instruments = ['ins0', 'ins1', 'ins2']
