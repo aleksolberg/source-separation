@@ -7,7 +7,6 @@ from nussl.ml.networks.modules import (
     LearnedFilterBank, AmplitudeToDB, RecurrentStack,
     MelProjection, BatchNorm, InstanceNorm, ShiftAndScale, ConvolutionalStack2D
 )
-import utils
 
 
 class UNet(nn.Module):
@@ -18,21 +17,29 @@ class UNet(nn.Module):
         self.stride = stride
         self.padding = tuple(ti//2 for ti in self.kernel_size) if padding is True else padding
         self.second_layer_channels=second_layer_channels
-        self.dropout = dropout
+        if type(dropout) == (float or int):
+            self.dropout = [dropout] * self.num_layers
+        elif type(dropout) == list:
+            '''if len(dropout) != self.num_layers - 1:
+                raise IndexError('Dropout list is not of correct length.')
+            else:'''
+            self.dropout = dropout
+        else:
+            raise TypeError('Dropout must be either of type \'float\' or \'list\'.')
 
         # Encoder
         self.convolutional_layers = nn.ModuleList()
         layer = nn.Sequential(
             nn.Conv2d(1, self.second_layer_channels, kernel_size = self.kernel_size, stride=self.stride, padding=self.padding),
             nn.BatchNorm2d(16),
-            nn.LeakyReLU(True)
+            nn.LeakyReLU(negative_slope=0.2)
         )
         self.convolutional_layers.append(layer)
         for i in range(self.num_layers - 1):
             layer = nn.Sequential(
                 nn.Conv2d(self.second_layer_channels*2**i, self.second_layer_channels*2**(i+1), kernel_size = self.kernel_size, stride=self.stride, padding=self.padding),
                 nn.BatchNorm2d(self.second_layer_channels*2**(i+1)),
-                nn.LeakyReLU(True)
+                nn.LeakyReLU(negative_slope=0.2)
             )
             self.convolutional_layers.append(layer)
         
@@ -54,8 +61,8 @@ class UNet(nn.Module):
         for i in range(self.num_layers - 1, 0, -1):
             layer = nn.Sequential(
                 nn.BatchNorm2d(self.second_layer_channels*2**(i-1)),
-                nn.ReLU(True),
-                nn.Dropout2d(self.dropout)
+                nn.ReLU(),
+                nn.Dropout2d(self.dropout[self.num_layers - (i+1)])
             )
             self.deconvolutional_BAD_layers.append(layer)
         

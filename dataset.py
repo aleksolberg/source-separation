@@ -81,7 +81,7 @@ class MixClosure:
             event_parameters['source_file'] = ('const', coherent_source_file)
             sc.add_event(**event_parameters)
         
-        return sc.generate(fix_clipping=True)
+        return sc.generate(fix_clipping=True, disable_sox_warnings=True)
 
     def incoherent(self, seed):
         sc = scaper.Scaper(
@@ -101,7 +101,7 @@ class MixClosure:
             event_parameters['label'] = ('const', label)
             sc.add_event(**event_parameters)
         
-        return sc.generate(fix_clipping=True)
+        return sc.generate(fix_clipping=True, disable_sox_warnings=True)
 
 
     def get_sr_and_channels(self): # Assumes all files in dataset is of same sample rate

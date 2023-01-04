@@ -9,3 +9,4 @@
 *.wav
 *.json
 pyvenv.cfg
+make_plots.py

@@ -1,7 +1,7 @@
 import nussl
 from nussl.datasets import transforms as nussl_tfm
 import torch
-from models import UNet, MelUNet
+from models import UNet
 import os
 import json
 import glob
@@ -10,17 +10,15 @@ import utils
 
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-stft_params = nussl.STFTParams(window_length=512, hop_length=128, window_type='sqrt_hann')
 
-model_path = 'source-separation/models/MelUNet/01/'
-#model = UNet.build(257, 432, 1, 1)
+model_path = 'source-separation/models/MelMaskInference/03/'
 
 separator = nussl.separation.deep.DeepMaskEstimation(
     nussl.AudioSignal(sample_rate=11025), model_path=model_path + 'checkpoints/best.model.pth',
     device=DEVICE
 )
 
-print(separator.config)
+print(separator.model)
 
 seperated_instruments = ['ins3']
 other_instruments = ['ins0', 'ins1', 'ins2']
@@ -30,9 +28,9 @@ tfm = nussl_tfm.Compose([
 ])
 
 test_folder = "source-separation/datasets/randomMIDI/PianoViolin11025/WAV/foreground/test"
-test_data = nussl.datasets.hooks.MixSourceFolder(folder=test_folder, transform=tfm, stft_params=stft_params)
+test_data = nussl.datasets.hooks.MixSourceFolder(folder=test_folder, transform=tfm, stft_params=separator.metadata['stft_params'])
 
-def evaluate(model_path, test_data, num_save=0):
+def evaluate(separator, model_path, test_data, num_save=0):
     songs_saved = 0
     for i in range(len(test_data)):
         item = test_data[i]
@@ -74,6 +72,5 @@ def evaluate(model_path, test_data, num_save=0):
     with open(model_path + 'report_card.json', 'w') as f:
         json.dump(report_card, f, indent=4)
 
-evaluate(model_path, test_data, num_save=5)
-
-
+utils.visualize_loss(separator.metadata['trainer.state.epoch_history']['validation/L1Loss'], separator.metadata['trainer.state.epoch_history']['train/L1Loss'])
+evaluate(separator, model_path, test_data, num_save=20)

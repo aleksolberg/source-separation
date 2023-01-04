@@ -45,8 +45,9 @@ if __name__ == '__main__':
     utils.logger()
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
     print('Using device', DEVICE)
-    MAX_MIXTURES = int(1e5) # We'll set this to some impossibly high number for on the fly mixing.
-    OUTPUT_FOLDER = 'source-separation/models/MelUNet/01/'
+    MAX_MIXTURES = int(1e8) # We'll set this to some impossibly high number for on the fly mixing.
+    MAX_EPOCHS = 400
+    OUTPUT_FOLDER = '/notebooks/models/MelMaskInference/04/'
     if os.path.exists(OUTPUT_FOLDER):
         print('\nWARNING:', OUTPUT_FOLDER, 'already exists.')
         input('Press Enter to overwrite')
@@ -80,11 +81,11 @@ if __name__ == '__main__':
     }
 
     # Paths to the train and validation sets
-    train_folder = 'source-separation/datasets/randomMIDI/PianoViolin11025/WAV/foreground/train'
-    val_folder = 'source-separation/datasets/randomMIDI/PianoViolin11025/WAV/foreground/val'
+    train_folder = '/datasets/randomMIDI/PianoViolin11025/WAV/foreground/train'
+    val_folder = '/datasets/randomMIDI/PianoViolin11025/WAV/foreground/val'
 
     # Path to background folder as Scaper requires it
-    background_folder = 'source-separation/datasets/randomMIDI/PianoViolin11025/WAV/background'
+    background_folder = '/datasets/randomMIDI/PianoViolin11025/WAV/background'
 
     # Loading the datasets as OnTheFly datasets
     train_data = nussl.datasets.OnTheFly(
@@ -94,7 +95,7 @@ if __name__ == '__main__':
         mix_closure=MixClosure(train_folder, background_folder, template_event_parameters, seperated_instruments + other_instruments)
     )
     train_dataloader = torch.utils.data.DataLoader(
-        train_data, num_workers=1, batch_size=200, pin_memory=True)
+        train_data, num_workers=6, batch_size=200, pin_memory=True)
 
     val_data = nussl.datasets.OnTheFly(
         stft_params = stft_params,
@@ -103,20 +104,21 @@ if __name__ == '__main__':
         mix_closure=MixClosure(val_folder, background_folder, template_event_parameters, seperated_instruments + other_instruments)
     )
     val_dataloader = torch.utils.data.DataLoader(
-        val_data, num_workers=1, batch_size=50, pin_memory=True)
+        val_data, num_workers=2, batch_size=50, pin_memory=True)
     
     nt, nf, num_channels = train_data[0]['mix_magnitude'].shape
 
     # Defining the model
-    #model = nussl.ml.SeparationModel(nussl.ml.networks.builders.build_recurrent_mask_inference(nf, 300, 4, True, 0.2, 1, 'sigmoid')).to(DEVICE)
-    #model = nussl.ml.SeparationModel(models.build_recurrent_mask_inference_with_mel_projection(nf, 300, 4, True, 0.2, 1, 'sigmoid', 11025, 128)).to(DEVICE)
-    #model = nussl.ml.SeparationModel(models.build_UNet(6, (5,5), (2,2), 2, 16, 0.5)).to(DEVICE)
-    model = nussl.ml.SeparationModel(models.build_MelUNet(6, (5,5), (2,2), nf, 11025, 128)).to(DEVICE)
+    #model = nussl.ml.SeparationModel(nussl.ml.networks.builders.build_recurrent_mask_inference(nf, 300, 4, True, 0.2, 1, 'sigmoid', normalization_args={'num_features': nf})).to(DEVICE)
+    model = nussl.ml.SeparationModel(models.build_recurrent_mask_inference_with_mel_projection(nf, 300, 4, True, 0.2, 1, 'sigmoid', 11025, 128, normalization_args={'num_features': nf})).to(DEVICE)
+    #model = nussl.ml.SeparationModel(models.build_UNet(6, (5,5), (2,2), 2, 16, dropout=[0.5, 0.5, 0.5, 0.0, 0.0], normalization_args={'num_features': nf})).to(DEVICE)
+    #model = nussl.ml.SeparationModel(models.build_MelUNet(6, (5,5), (2,2), nf, 11025, 128, dropout=[0.5, 0.5, 0.5, 0.0, 0.0], normalization_args={'num_features': nf})).to(DEVICE)
+    #model = nussl.ml.SeparationModel(models.build_MelUNet(6, (5,5), (2,2), nf, 11025, 256, dropout=[0.5, 0.5, 0.5, 0.0, 0.0], normalization_args={'num_features': nf})).to(DEVICE)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     loss_fn = nussl.ml.train.loss.L1Loss()
     #torch_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.98)
-    torch_lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 10)
+    torch_lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, MAX_EPOCHS-20)
     #scheduler = LRScheduler(torch_lr_scheduler)
     scheduler = create_lr_scheduler_with_warmup(torch_lr_scheduler, 1e-5, 20)
 
@@ -139,6 +141,6 @@ if __name__ == '__main__':
 
     trainer.run(
         train_dataloader, 
-        epoch_length=5, 
-        max_epochs=400
+        epoch_length=10, 
+        max_epochs=MAX_EPOCHS
     )

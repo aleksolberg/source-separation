@@ -1,6 +1,7 @@
 import nussl
 import matplotlib.pyplot as plt
 import logging
+import numpy as np
 
 def visualize_spectrogram(audio_file):
     plt.figure(figsize=(10, 3))
@@ -21,12 +22,24 @@ def visualize_sources_and_estimates(source_dict, estimates_dict):
 
     plt.subplot(211)
     plt.title('Sources')
-    nussl.utils.visualize_sources_as_masks(source_dict)
+    nussl.utils.visualize_sources_as_masks(source_dict, show_legend=True)
 
     plt.subplot(212)
     plt.title('Estimates')
-    nussl.utils.visualize_sources_as_masks(estimates_dict)
+    nussl.utils.visualize_sources_as_masks(estimates_dict, show_legend=False)
 
+    plt.tight_layout()
+    plt.show()
+
+def visualize_loss(val_loss, train_loss=None):
+    plt.figure(figsize=(5,4))
+    plt.plot(np.arange(1, len(val_loss) + 1), val_loss, label='Validation loss')
+
+    if train_loss is not None:
+        plt.plot(np.arange(1, len(val_loss) + 1), train_loss, label='Training loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
     plt.tight_layout()
     plt.show()
 
