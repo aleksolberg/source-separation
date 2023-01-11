@@ -20,7 +20,6 @@ def train_step(engine, batch):
     optimizer.step()
     
     loss_vals = {
-        'L1Loss': loss.item(),
         'loss': loss.item()
     }
     
@@ -35,7 +34,6 @@ def val_step(engine, batch):
         batch['source_magnitudes']
     )    
     loss_vals = {
-        'L1Loss': loss.item(), 
         'loss': loss.item()
     }
     return loss_vals
@@ -45,9 +43,9 @@ if __name__ == '__main__':
     utils.logger()
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
     print('Using device', DEVICE)
-    MAX_MIXTURES = int(1e8) # We'll set this to some impossibly high number for on the fly mixing.
-    MAX_EPOCHS = 400
-    OUTPUT_FOLDER = '/notebooks/models/MelMaskInference/04/'
+    MAX_MIXTURES = int(1e4) # We'll set this to some impossibly high number for on the fly mixing.
+    MAX_EPOCHS = 40
+    OUTPUT_FOLDER = 'source-separation/models/MelMaskInference/05/'
     if os.path.exists(OUTPUT_FOLDER):
         print('\nWARNING:', OUTPUT_FOLDER, 'already exists.')
         input('Press Enter to overwrite')
@@ -81,11 +79,11 @@ if __name__ == '__main__':
     }
 
     # Paths to the train and validation sets
-    train_folder = '/datasets/randomMIDI/PianoViolin11025/WAV/foreground/train'
-    val_folder = '/datasets/randomMIDI/PianoViolin11025/WAV/foreground/val'
+    train_folder = 'source-separation/datasets/randomMIDI/PianoViolin11025/WAV/foreground/train'
+    val_folder = 'source-separation/datasets/randomMIDI/PianoViolin11025/WAV/foreground/val'
 
     # Path to background folder as Scaper requires it
-    background_folder = '/datasets/randomMIDI/PianoViolin11025/WAV/background'
+    background_folder = 'source-separation/datasets/randomMIDI/PianoViolin11025/WAV/background'
 
     # Loading the datasets as OnTheFly datasets
     train_data = nussl.datasets.OnTheFly(
@@ -95,7 +93,7 @@ if __name__ == '__main__':
         mix_closure=MixClosure(train_folder, background_folder, template_event_parameters, seperated_instruments + other_instruments)
     )
     train_dataloader = torch.utils.data.DataLoader(
-        train_data, num_workers=6, batch_size=200, pin_memory=True)
+        train_data, num_workers=0, batch_size=20, pin_memory=True)
 
     val_data = nussl.datasets.OnTheFly(
         stft_params = stft_params,
@@ -104,19 +102,19 @@ if __name__ == '__main__':
         mix_closure=MixClosure(val_folder, background_folder, template_event_parameters, seperated_instruments + other_instruments)
     )
     val_dataloader = torch.utils.data.DataLoader(
-        val_data, num_workers=2, batch_size=50, pin_memory=True)
+        val_data, num_workers=0, batch_size=5, pin_memory=True)
     
     nt, nf, num_channels = train_data[0]['mix_magnitude'].shape
 
     # Defining the model
-    #model = nussl.ml.SeparationModel(nussl.ml.networks.builders.build_recurrent_mask_inference(nf, 300, 4, True, 0.2, 1, 'sigmoid', normalization_args={'num_features': nf})).to(DEVICE)
-    model = nussl.ml.SeparationModel(models.build_recurrent_mask_inference_with_mel_projection(nf, 300, 4, True, 0.2, 1, 'sigmoid', 11025, 128, normalization_args={'num_features': nf})).to(DEVICE)
+    model = nussl.ml.SeparationModel(nussl.ml.networks.builders.build_recurrent_mask_inference(nf, 300, 4, True, 0.2, 1, 'sigmoid', normalization_args={'num_features': nf})).to(DEVICE)
+    #model = nussl.ml.SeparationModel(models.build_recurrent_mask_inference_with_mel_projection(nf, 300, 4, True, 0.2, 1, 'sigmoid', 11025, 128, normalization_args={'num_features': nf})).to(DEVICE)
     #model = nussl.ml.SeparationModel(models.build_UNet(6, (5,5), (2,2), 2, 16, dropout=[0.5, 0.5, 0.5, 0.0, 0.0], normalization_args={'num_features': nf})).to(DEVICE)
     #model = nussl.ml.SeparationModel(models.build_MelUNet(6, (5,5), (2,2), nf, 11025, 128, dropout=[0.5, 0.5, 0.5, 0.0, 0.0], normalization_args={'num_features': nf})).to(DEVICE)
-    #model = nussl.ml.SeparationModel(models.build_MelUNet(6, (5,5), (2,2), nf, 11025, 256, dropout=[0.5, 0.5, 0.5, 0.0, 0.0], normalization_args={'num_features': nf})).to(DEVICE)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     loss_fn = nussl.ml.train.loss.L1Loss()
+    #loss_fn = nussl.ml.train.loss.MSELoss()
     #torch_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.98)
     torch_lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, MAX_EPOCHS-20)
     #scheduler = LRScheduler(torch_lr_scheduler)

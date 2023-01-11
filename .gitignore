@@ -6,6 +6,7 @@
 /include
 /lib
 /share
+/models
 *.wav
 *.json
 pyvenv.cfg

@@ -72,5 +72,5 @@ def evaluate(separator, model_path, test_data, num_save=0):
     with open(model_path + 'report_card.json', 'w') as f:
         json.dump(report_card, f, indent=4)
 
-utils.visualize_loss(separator.metadata['trainer.state.epoch_history']['validation/L1Loss'], separator.metadata['trainer.state.epoch_history']['train/L1Loss'])
+utils.visualize_loss(separator.metadata['trainer.state.epoch_history']['validation/loss'], separator.metadata['trainer.state.epoch_history']['train/loss'])
 evaluate(separator, model_path, test_data, num_save=20)

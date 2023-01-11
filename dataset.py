@@ -6,7 +6,7 @@ import warnings
 
 
 class MixClosure:
-    def __init__(self, fg_folder, bg_folder, event_template, source_labels, incoherent_rate=0.5, duration=5.0, ref_db=-20):
+    def __init__(self, fg_folder, bg_folder, event_template, source_labels, incoherent_rate=1.0, duration=5.0, ref_db=-20):
         self.fg_folder = fg_folder
         self.bg_folder = bg_folder
         if not os.path.exists(fg_folder):

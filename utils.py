@@ -26,7 +26,7 @@ def visualize_sources_and_estimates(source_dict, estimates_dict):
 
     plt.subplot(212)
     plt.title('Estimates')
-    nussl.utils.visualize_sources_as_masks(estimates_dict, show_legend=False)
+    nussl.utils.visualize_sources_as_masks(estimates_dict, show_legend=True)
 
     plt.tight_layout()
     plt.show()
