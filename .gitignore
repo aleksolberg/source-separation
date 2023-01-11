@@ -7,7 +7,6 @@
 /lib
 /share
 /models
-*.wav
 *.json
 pyvenv.cfg
 make_plots.py
