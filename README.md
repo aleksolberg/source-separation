@@ -1,6 +1,7 @@
 # Source separation
 
 The separated audio of one of the songs in the test set can be listened to below.
+(Sorry for the ugly formatting, github supports embedding video, but not audio.)
 
 ## Mix:
 
